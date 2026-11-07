@@ -1,0 +1,589 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cazachispas UV</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: banco de pruebas — tablero en vivo a la izquierda, lecturas del Arduino a la derecha, controles y gráfica debajo, física al final */
+:root{
+  --bg:#EDEFF5; --surface:#FFFFFF; --ink:#141830; --muted:#596079; --line:#C7CCDA;
+  --uv:#6236E6; --uv-soft:rgba(98,54,230,.12); --spark:#E07E10; --ok:#178A5E; --bad:#D2343A;
+  --wire:#8A91A8; --live:#E07E10;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1020; --surface:#141A2F; --ink:#E7EAF4; --muted:#8F97B2; --line:#283052;
+  --uv:#9E80FF; --uv-soft:rgba(158,128,255,.16); --spark:#FFAE45; --ok:#3CC98F; --bad:#FF5C61;
+  --wire:#5C6487; --live:#FFAE45; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1020; --surface:#141A2F; --ink:#E7EAF4; --muted:#8F97B2; --line:#283052;
+  --uv:#9E80FF; --uv-soft:rgba(158,128,255,.16); --spark:#FFAE45; --ok:#3CC98F; --bad:#FF5C61;
+  --wire:#5C6487; --live:#FFAE45; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{padding-block:28px 18px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--uv)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,6vw,56px);line-height:1;margin:6px 0 8px;letter-spacing:-.02em}
+h1 span{color:var(--uv)}
+.lede{color:var(--muted);max-width:56ch;margin:0;text-wrap:pretty}
+.pill{font-family:var(--f-mono);font-weight:600;font-size:14px;letter-spacing:.06em;padding:10px 16px;border-radius:999px;border:2px solid var(--ok);color:var(--ok);display:inline-flex;gap:10px;align-items:center;white-space:nowrap}
+.pill i{width:10px;height:10px;border-radius:50%;background:currentColor}
+.pill.cut{border-color:var(--bad);color:var(--bad)}
+.pill.cut i{animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+main{display:grid;gap:28px;padding-block:8px 48px}
+h2{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 14px;max-width:70ch}
+.sim{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px}
+@media (max-width:860px){.sim{grid-template-columns:1fr}}
+.board{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
+.board svg{width:100%;height:auto;display:block}
+.readout{display:grid;gap:12px;align-content:start}
+.state{border-radius:14px;padding:16px;background:var(--surface);border:1px solid var(--line)}
+.state .big{font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1.05;color:var(--ok)}
+.state.cut .big{color:var(--bad)}
+.state .why{color:var(--muted);font-size:14px;margin-top:4px;min-height:21px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stats div{background:var(--surface);padding:10px 12px}
+.stats dt{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.stats dd{margin:2px 0 0;font-family:var(--f-mono);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--f-body);font-weight:700;font-size:14px;padding:10px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);transition:transform .08s,border-color .15s,background .15s}
+.btn:hover{border-color:var(--uv)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--uv);outline-offset:2px}
+.btn[aria-pressed="true"]{background:var(--uv-soft);border-color:var(--uv);color:var(--uv)}
+.btn.primary{background:var(--uv);border-color:var(--uv);color:#fff}
+.btn.hot{border-color:var(--spark)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.rearm{width:100%}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.controls{grid-template-columns:1fr}}
+.group{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:10px;align-content:start;min-width:0}
+.group h3{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.range{display:grid;gap:4px}
+.range label{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.range output{font-family:var(--f-mono);font-weight:600;font-variant-numeric:tabular-nums}
+.range code{font-family:var(--f-mono);font-size:13px;color:var(--uv)}
+input[type=range]{width:100%;accent-color:var(--uv)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.plotbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.legend b{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+canvas{width:100%;display:block}
+.serial{background:#0B0F1C;color:#B9C3E6;border-radius:12px;padding:12px 14px;font-family:var(--f-mono);font-size:12.5px;line-height:1.55;height:190px;overflow:auto;margin:0;white-space:pre}
+.serial .c{color:#FF6B70;font-weight:600}
+.serial .h{color:#7E89B0}
+.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.spectrum{height:14px;border-radius:7px;background:linear-gradient(90deg,#2b0a3d 0%,#4b1a8a 18%,#6a35d6 30%,#4060ff 46%,#18a8d8 54%,#2bbf5a 64%,#e9d23a 76%,#f08a24 86%,#d8303a 100%);margin:6px 0 2px}
+.ticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.ebar{position:relative;height:30px;border-radius:8px;background:var(--bg);border:1px solid var(--line);margin-top:14px;overflow:hidden}
+.ebar .fill{position:absolute;inset:0 auto 0 0;background:var(--uv-soft);border-right:3px solid var(--uv);transition:width .15s}
+.ebar .gap{position:absolute;top:0;bottom:0;width:2px;background:var(--spark)}
+.ebar .gaplabel{position:absolute;top:6px;font-family:var(--f-mono);font-size:11px;color:var(--spark);padding-left:6px}
+.verdict{margin-top:12px;font-weight:700;font-size:16px}
+.verdict.yes{color:var(--ok)} .verdict.no{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:13px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+.chip:hover{border-color:var(--uv)}
+.formula{font-family:var(--f-mono);font-size:14px;margin-top:10px;font-variant-numeric:tabular-nums}
+.scen{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.scen li{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:8px}
+.scen li:first-child{border-top:0;padding-top:0}
+.scen span{min-width:0}
+.scen em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
+.vertex svg{width:100%;height:auto}
+p{max-width:68ch}
+footer{color:var(--muted);font-size:13px;padding-block:0 32px}
+.flow{stroke-dasharray:5 9;animation:flow .6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-14}}
+@media (prefers-reduced-motion:reduce){.flow{animation:none}.pill.cut i{animation:none}}
+</style>
+
+<header class="wrap top">
+  <div>
+    <div class="eyebrow">Simulador · El Gran Reto · circuitos eléctricos</div>
+    <h1>Caza<span>chispas</span> UV</h1>
+    <p class="lede">Provoca fallas en el tablero y mira cómo el Arduino decide. La lógica de abajo es la misma del código del prototipo: línea base que se adapta, pulsos UV y doble confirmación.</p>
+  </div>
+  <div class="pill" id="pill" role="status" aria-live="polite"><i></i><span id="pillText">ENERGÍA ON</span></div>
+</header>
+
+<main class="wrap">
+
+  <section class="sim" aria-label="Tablero simulado">
+    <div class="board">
+      <svg viewBox="0 0 760 330" role="img" aria-label="Esquema del prototipo: fuente, sensor de corriente, relé, empalme, foco, sensor UV, Arduino y alarma">
+        <defs>
+          <radialGradient id="glow"><stop offset="0" stop-color="#FFD873" stop-opacity=".95"/><stop offset="1" stop-color="#FFD873" stop-opacity="0"/></radialGradient>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+        </defs>
+        <!-- retorno GND -->
+        <path d="M680 46 V20 H75 V40" fill="none" stroke="var(--wire)" stroke-width="2.5"/>
+        <text x="380" y="14" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="JetBrains Mono, monospace">GND (retorno)</text>
+        <!-- linea de potencia -->
+        <path id="w1" d="M130 68 H170" fill="none" stroke="var(--wire)" stroke-width="3"/>
+        <path id="w2" d="M290 68 H330" fill="none" stroke="var(--wire)" stroke-width="3"/>
+        <path id="w3" d="M440 68 H480" fill="none" stroke="var(--wire)" stroke-width="3"/>
+        <path id="w4" d="M590 68 H658" fill="none" stroke="var(--wire)" stroke-width="3"/>
+        <g id="flows" stroke="var(--live)" stroke-width="3" fill="none">
+          <path class="flow fa" d="M130 68 H170"/><path class="flow fa" d="M290 68 H330"/>
+          <path class="flow fb" d="M440 68 H480"/><path class="flow fb" d="M590 68 H658"/>
+        </g>
+        <!-- fuente -->
+        <rect x="20" y="40" width="110" height="56" rx="9" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="75" y="64" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">Fuente</text>
+        <text x="75" y="82" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="JetBrains Mono, monospace">12 V · 2 A</text>
+        <!-- ACS712 -->
+        <rect x="170" y="40" width="120" height="56" rx="9" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="230" y="64" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">ACS712</text>
+        <text x="230" y="82" text-anchor="middle" font-size="12" fill="var(--muted)">mide corriente</text>
+        <!-- rele -->
+        <rect x="330" y="40" width="110" height="56" rx="9" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="385" y="57" text-anchor="middle" font-weight="700" font-size="13" fill="var(--ink)">Relé</text>
+        <circle cx="352" cy="78" r="3.5" fill="var(--ink)"/><circle cx="418" cy="78" r="3.5" fill="var(--ink)"/>
+        <line id="lever" x1="352" y1="78" x2="416" y2="78" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" style="transition:transform .12s;transform-origin:352px 78px"/>
+        <!-- bornera -->
+        <rect id="bornBox" x="480" y="40" width="110" height="56" rx="9" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="535" y="57" text-anchor="middle" font-weight="700" font-size="13" fill="var(--ink)">Empalme</text>
+        <rect x="508" y="66" width="22" height="18" rx="3" fill="none" stroke="var(--muted)"/><rect x="540" y="66" width="22" height="18" rx="3" fill="none" stroke="var(--muted)"/>
+        <line id="looseWire" x1="530" y1="75" x2="540" y2="75" stroke="var(--wire)" stroke-width="3"/>
+        <text id="bornTag" x="535" y="110" text-anchor="middle" font-size="11.5" fill="var(--bad)" font-family="JetBrains Mono, monospace" opacity="0">tornillo flojo</text>
+        <g id="sparks"></g>
+        <!-- foco -->
+        <circle id="glowC" cx="682" cy="68" r="46" fill="url(#glow)"/>
+        <circle id="bulb" cx="682" cy="68" r="22" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.8"/>
+        <path d="M672 74 q5 -14 10 0 q5 -14 10 0" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+        <text x="682" y="112" text-anchor="middle" font-size="12" fill="var(--muted)">foco 12 V</text>
+        <!-- señales -->
+        <g stroke="var(--muted)" stroke-width="1.3" fill="none" stroke-dasharray="4 4">
+          <path d="M260 96 V218" marker-end="url(#ar)"/>
+          <path d="M385 218 V98" marker-end="url(#ar)"/>
+          <path d="M478 262 H422" marker-end="url(#ar)"/>
+          <path d="M228 262 H162" marker-end="url(#ar)"/>
+        </g>
+        <g font-family="JetBrains Mono, monospace" font-size="11.5" fill="var(--muted)">
+          <text x="252" y="160" text-anchor="end">A1</text>
+          <text x="393" y="160">D7</text>
+          <text x="450" y="254" text-anchor="middle">A0</text>
+          <text x="195" y="254" text-anchor="middle">D8–D10</text>
+        </g>
+        <!-- fotones -->
+        <g id="photons"></g>
+        <text id="phLabel" x="600" y="170" font-size="11.5" fill="var(--uv)" font-family="JetBrains Mono, monospace" opacity="0">fotones UV · 337 nm</text>
+        <!-- sensor UV -->
+        <rect x="480" y="232" width="150" height="62" rx="9" fill="var(--surface)" stroke="var(--uv)" stroke-width="1.5"/>
+        <circle cx="535" cy="232" r="8" fill="var(--uv-soft)" stroke="var(--uv)" stroke-width="1.5"/>
+        <text x="555" y="262" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">Sensor UV</text>
+        <text x="555" y="280" text-anchor="middle" font-size="11.5" fill="var(--muted)" font-family="JetBrains Mono, monospace">GUVA · 240–370 nm</text>
+        <!-- arduino -->
+        <rect x="228" y="220" width="194" height="84" rx="10" fill="var(--uv-soft)" stroke="var(--uv)" stroke-width="2"/>
+        <text x="325" y="250" text-anchor="middle" font-weight="800" font-size="16" fill="var(--ink)" font-family="Bricolage Grotesque, sans-serif">Arduino</text>
+        <text id="ardTxt" x="325" y="272" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="JetBrains Mono, monospace">vigilando…</text>
+        <text id="ardPul" x="325" y="290" text-anchor="middle" font-size="11.5" fill="var(--muted)" font-family="JetBrains Mono, monospace">pulsos: 0/3</text>
+        <!-- alarma -->
+        <rect x="20" y="232" width="142" height="62" rx="9" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="91" y="256" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">Alarma</text>
+        <circle id="ledG" cx="58" cy="276" r="7" fill="var(--ok)"/>
+        <circle id="ledR" cx="82" cy="276" r="7" fill="var(--bad)" opacity=".18"/>
+        <g id="buzz" opacity=".25"><circle cx="118" cy="276" r="8" fill="none" stroke="var(--ink)" stroke-width="1.5"/><path d="M130 268 q6 8 0 16 M135 264 q9 12 0 24" fill="none" stroke="var(--ink)" stroke-width="1.3"/></g>
+      </svg>
+    </div>
+
+    <aside class="readout">
+      <div class="state" id="stateBox">
+        <div class="big" id="stateBig">Energía ON</div>
+        <div class="why" id="stateWhy">El circuito funciona normal.</div>
+      </div>
+      <dl class="stats">
+        <div><dt>UV (A0)</dt><dd id="vUV">0</dd></div>
+        <div><dt>Umbral UV</dt><dd id="vTh">0</dd></div>
+        <div><dt>Ruido (A1)</dt><dd id="vNo">0</dd></div>
+        <div><dt>Pulsos / 2 s</dt><dd id="vPu">0</dd></div>
+        <div><dt>Tiempo de corte</dt><dd id="vTc">—</dd></div>
+        <div><dt>Cortes</dt><dd id="vCt">0</dd></div>
+      </dl>
+      <button class="btn primary rearm" id="rearm" disabled>Rearmar (botón D2)</button>
+      <p class="hint">Rearmar recalibra la línea base, igual que <code>calibrar()</code> en el código.</p>
+    </aside>
+  </section>
+
+  <section class="controls" aria-label="Controles">
+    <div class="group">
+      <h3>Provoca una falla</h3>
+      <div class="row">
+        <button class="btn" id="bLoose" aria-pressed="false">Aflojar empalme</button>
+        <button class="btn hot" id="bArc">Chispa en el empalme</button>
+        <button class="btn" id="bLighter" aria-pressed="false">Encendedor de arco</button>
+      </div>
+      <p class="hint" id="faultHint">Un arco real en el empalme mete UV y ruido a la vez. El encendedor de la demo solo mete UV.</p>
+    </div>
+    <div class="group">
+      <h3>Ambiente</h3>
+      <div class="range">
+        <label for="rSun">Sol por la ventana <output id="oSun">20 %</output></label>
+        <input type="range" id="rSun" min="0" max="100" value="20">
+      </div>
+      <div class="row"><button class="btn" id="bTorch" aria-pressed="false">Linterna LED al sensor</button></div>
+      <p class="hint" id="torchHint">Prende la linterna: el sensor de nitruro de galio no la ve.</p>
+    </div>
+    <div class="group">
+      <h3>Ajustes del código</h3>
+      <div class="range">
+        <label for="rUV"><code>UMBRAL_UV</code> <output id="oUV">40</output></label>
+        <input type="range" id="rUV" min="10" max="150" value="40">
+      </div>
+      <div class="range">
+        <label for="rNo"><code>UMBRAL_RUIDO</code> <output id="oNo">25</output></label>
+        <input type="range" id="rNo" min="5" max="100" value="25">
+      </div>
+      <div class="range">
+        <label for="rDist">Distancia sensor–chispa <output id="oDist">20 cm</output></label>
+        <input type="range" id="rDist" min="10" max="80" value="20">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Serial Plotter</h2>
+    <p class="sub">Lo mismo que verías en el IDE de Arduino durante la exposición. Arriba la señal UV contra su umbral; abajo el ruido de la corriente. Las líneas rojas marcan cada corte.</p>
+    <div class="plotbox">
+      <div class="legend">
+        <span><b style="background:var(--uv)"></b>UV (A0)</span>
+        <span><b style="background:var(--muted)"></b>línea base + UMBRAL_UV</span>
+        <span><b style="background:var(--spark)"></b>ruido de corriente</span>
+        <span><b style="background:var(--bad)"></b>corte</span>
+      </div>
+      <canvas id="plot" height="260" aria-label="Gráfica en vivo de la señal UV y el ruido de corriente"></canvas>
+    </div>
+  </section>
+
+  <section class="two">
+    <div>
+      <h2>Monitor serie</h2>
+      <p class="sub">Salida de <code>Serial.print</code> a 115200 baudios: UV, umbral, ruido.</p>
+      <pre class="serial" id="serial"></pre>
+    </div>
+    <div class="panel">
+      <h2>Pruebas de la sección 9</h2>
+      <p class="sub">Cada botón rearma el sistema y arma el escenario.</p>
+      <ul class="scen">
+        <li><span>Sol fuerte por la ventana<em>Esperado: no corta</em></span><button class="btn" data-s="1">Probar</button></li>
+        <li><span>Linterna LED apuntando al sensor<em>Esperado: no corta</em></span><button class="btn" data-s="2">Probar</button></li>
+        <li><span>Encendedor de arco a 20 cm<em>Esperado: corta por chispas repetidas</em></span><button class="btn" data-s="3">Probar</button></li>
+        <li><span>Encendedor de arco a 60 cm<em>Mide el alcance</em></span><button class="btn" data-s="4">Probar</button></li>
+        <li><span>Empalme flojo, sin chispa<em>Esperado: no corta (falta el UV)</em></span><button class="btn" data-s="5">Probar</button></li>
+        <li><span>Arco en el empalme flojo<em>Esperado: corta por UV + corriente</em></span><button class="btn" data-s="6">Probar</button></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Por qué el sensor solo ve chispas</h2>
+    <p class="sub">Un fotón solo arranca un electrón en el nitruro de galio si su energía supera la brecha de 3.4 eV. Mueve la longitud de onda y compara.</p>
+    <div class="two">
+      <div class="panel">
+        <div class="range">
+          <label for="rLam">Longitud de onda <output id="oLam">337 nm</output></label>
+          <input type="range" id="rLam" min="200" max="700" value="337">
+        </div>
+        <div class="spectrum" aria-hidden="true"></div>
+        <div class="ticks"><span>200</span><span>300</span><span>400</span><span>500</span><span>600</span><span>700 nm</span></div>
+        <div class="formula" id="fE">E = 1240 / 337 = 3.68 eV</div>
+        <div class="ebar" aria-hidden="true"><div class="fill" id="eFill"></div><div class="gap" id="eGap"></div><div class="gaplabel" id="eGapL">brecha GaN 3.4 eV</div></div>
+        <div class="ticks"><span>0 eV</span><span>1.5</span><span>3</span><span>4.5</span><span>6 eV</span></div>
+        <div class="verdict" id="verdict">Detectado</div>
+        <div class="chips">
+          <button class="chip" data-l="337">Chispa en aire · 337</button>
+          <button class="chip" data-l="395">LED UV común · 395</button>
+          <button class="chip" data-l="450">LED blanco · 450</button>
+          <button class="chip" data-l="550">Sol visible · 550</button>
+          <button class="chip" data-l="254">UV-C · 254</button>
+        </div>
+      </div>
+      <div class="panel vertex">
+        <svg viewBox="0 0 420 220" role="img" aria-label="El vértice de la QED: emisión en la chispa y absorción en el sensor">
+          <defs><marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ink)"/></marker></defs>
+          <text x="105" y="22" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">En la chispa</text>
+          <text x="315" y="22" text-anchor="middle" font-weight="700" font-size="14" fill="var(--ink)">En el sensor</text>
+          <line x1="210" y1="34" x2="210" y2="200" stroke="var(--line)"/>
+          <!-- emision -->
+          <path d="M40 180 L105 110" stroke="var(--ink)" stroke-width="2" marker-end="url(#ae)" fill="none"/>
+          <path d="M105 110 L60 40" stroke="var(--ink)" stroke-width="2" marker-end="url(#ae)" fill="none"/>
+          <circle cx="105" cy="110" r="5" fill="var(--spark)"/>
+          <path d="M105 110 q8 -10 16 0 t16 0 t16 0 t16 0 t16 0" stroke="var(--uv)" stroke-width="2" fill="none"/>
+          <text x="30" y="196" font-size="12" fill="var(--muted)">N₂ excitada</text>
+          <text x="40" y="36" font-size="12" fill="var(--muted)">N₂ relajada</text>
+          <text x="140" y="96" font-size="12" fill="var(--uv)" font-family="JetBrains Mono, monospace">γ 337 nm</text>
+          <!-- absorcion -->
+          <path d="M235 110 q8 -10 16 0 t16 0 t16 0 t16 0 t16 0" stroke="var(--uv)" stroke-width="2" fill="none"/>
+          <circle cx="315" cy="110" r="5" fill="var(--spark)"/>
+          <path d="M370 180 L315 110" stroke="var(--ink)" stroke-width="2" fill="none"/>
+          <path d="M315 110 L365 40" stroke="var(--ink)" stroke-width="2" marker-end="url(#ae)" fill="none"/>
+          <text x="236" y="96" font-size="12" fill="var(--uv)" font-family="JetBrains Mono, monospace">γ 337 nm</text>
+          <text x="320" y="196" font-size="12" fill="var(--muted)">e⁻ ligado</text>
+          <text x="330" y="36" font-size="12" fill="var(--muted)">e⁻ libre → corriente</text>
+        </svg>
+        <p class="hint">El mismo vértice de la QED, leído en dos sentidos. En la chispa, la fluctuación del vacío hace que la molécula suelte el fotón (emisión espontánea). En el sensor, el fotón es absorbido y libera un electrón: esa es la señal que lee el Arduino.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+<footer class="wrap">Simulación educativa del prototipo de 12 V. Los valores son ilustrativos y se calibran con el prototipo real.</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const S = {
+    energia:true, disparado:false, motivo:'', loose:false, lighter:false, torch:false,
+    sun:20, ambCur:0, umbralUV:40, umbralRuido:25, dist:20,
+    sensor:0, base:0, pulsos:0, inicioVentana:0, uvAlto:false,
+    t:0, eventStart:null, cortes:0, arcTicks:0, ruidoBoost:0, uv:0, ruido:0, tCorte:null
+  };
+  const N = 320, hist = [];
+  const log = [];
+  const ambTarget = () => 18 + S.sun * 2.2;
+
+  function calibrar(){ S.base = S.uv || ambTarget(); S.pulsos = 0; S.inicioVentana = S.t; S.uvAlto = false; }
+  function energiaOn(){ S.energia = true; S.disparado = false; S.motivo = ''; render(); }
+  function cortar(m){
+    S.disparado = true; S.energia = false; S.motivo = m; S.cortes++;
+    S.tCorte = S.eventStart != null ? (S.t - S.eventStart + 15) : null;
+    pushLog('CORTE: ' + m, 'c'); hist.push({cut:true});
+    render();
+  }
+  function pushLog(line, cls){
+    log.push({line, cls}); if (log.length > 60) log.shift();
+    const el = $('serial');
+    el.innerHTML = log.map(l => l.cls ? `<span class="${l.cls}">${l.line}</span>` : l.line).join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // --- simulación a 50 Hz ---
+  function tick(){
+    S.t += 20;
+    S.ambCur += (ambTarget() - S.ambCur) * 0.03;
+    let impulse = 0, sparkNow = false;
+    const k = Math.pow(20 / S.dist, 2);
+    if (S.lighter && Math.random() < 0.18){ impulse += 900 * k; sparkNow = true; drawSpark(); }
+    if (S.arcTicks > 0){
+      S.arcTicks--;
+      if (S.energia && Math.random() < 0.55){ impulse += 900 * k; sparkNow = true; S.ruidoBoost = 70 + Math.random()*90; drawSpark(); }
+    }
+    if (sparkNow){
+      if (S.eventStart == null || S.t - S.eventStart > 3000) S.eventStart = S.t;
+      emitPhotons(Math.min(6, 1 + Math.round(4 * k)));
+    }
+    const input = S.ambCur + impulse + (Math.random() - .5) * 6;
+    S.sensor += (input - S.sensor) * 0.25;
+    S.uv = Math.max(0, Math.min(1023, Math.round(S.sensor)));
+
+    // ruido de corriente (max - min de 100 lecturas)
+    if (S.energia){
+      let r = 2 + Math.random() * 3;
+      if (S.loose && Math.random() < 0.6) r += 12 + Math.random() * 14;
+      r += S.ruidoBoost; S.ruidoBoost *= 0.82;
+      S.ruido = Math.round(r);
+    } else { S.ruido = Math.round(Math.random() * 1.5); S.ruidoBoost = 0; }
+
+    // --- la misma lógica del loop() del Arduino ---
+    if (!S.disparado){
+      const uvAhora = S.uv > S.base + S.umbralUV;
+      if (!uvAhora) S.base = 0.995 * S.base + 0.005 * S.uv;
+      if (uvAhora && !S.uvAlto){
+        if (S.t - S.inicioVentana > 2000){ S.pulsos = 0; S.inicioVentana = S.t; }
+        S.pulsos++;
+      }
+      S.uvAlto = uvAhora;
+      if (S.t - S.inicioVentana > 2000 && !uvAhora){ S.pulsos = 0; S.inicioVentana = S.t; }
+      if (uvAhora && S.ruido > S.umbralRuido) cortar('UV + corriente inestable');
+      else if (S.pulsos >= 3) cortar('chispas UV repetidas');
+    }
+
+    hist.push({uv:S.uv, th:S.base + S.umbralUV, no:S.ruido});
+    while (hist.length > N) hist.shift();
+    if ((S.t / 20) % 10 === 0) pushLog(`${S.uv},${Math.round(S.base + S.umbralUV)},${S.ruido}`);
+    renderStats();
+  }
+
+  // --- visuales del tablero ---
+  const NS = 'http://www.w3.org/2000/svg';
+  function drawSpark(){
+    const g = $('sparks');
+    const p = document.createElementNS(NS, 'polyline');
+    let x = 530, y = 75, pts = [`${x},${y}`];
+    for (let i = 0; i < 4; i++){ x += 2.5; y += (Math.random() - .5) * 14; pts.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
+    pts.push('540,75');
+    p.setAttribute('points', pts.join(' '));
+    p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'var(--spark)'); p.setAttribute('stroke-width', '2.2');
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', 535); c.setAttribute('cy', 75); c.setAttribute('r', 14);
+    c.setAttribute('fill', 'var(--uv)'); c.setAttribute('opacity', '.28');
+    g.append(c, p);
+    setTimeout(() => { p.remove(); c.remove(); }, 110);
+  }
+  const photons = [];
+  function emitPhotons(n){
+    for (let i = 0; i < n; i++) photons.push({x:535 + (Math.random()-.5)*10, y:90, vx:(Math.random()-.5)*0.4, t:0});
+    $('phLabel').setAttribute('opacity', '1');
+    clearTimeout(emitPhotons.h); emitPhotons.h = setTimeout(() => $('phLabel').setAttribute('opacity', '0'), 900);
+  }
+  function animPhotons(){
+    const g = $('photons');
+    g.textContent = '';
+    for (let i = photons.length - 1; i >= 0; i--){
+      const p = photons[i]; p.t++; p.y += 4.2; p.x += p.vx * 4;
+      if (p.y > 228){ photons.splice(i, 1); continue; }
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', p.x.toFixed(1)); c.setAttribute('cy', p.y.toFixed(1)); c.setAttribute('r', 3);
+      c.setAttribute('fill', 'var(--uv)');
+      g.append(c);
+    }
+  }
+
+  function render(){
+    const cut = S.disparado;
+    $('pill').classList.toggle('cut', cut);
+    $('pillText').textContent = cut ? 'CORTE' : 'ENERGÍA ON';
+    $('stateBox').classList.toggle('cut', cut);
+    $('stateBig').textContent = cut ? 'Energía cortada' : 'Energía ON';
+    $('stateWhy').textContent = cut ? `Motivo: ${S.motivo}. Revisa y rearma.` : (S.loose ? 'Empalme flojo: la corriente se volvió inestable.' : 'El circuito funciona normal.');
+    $('rearm').disabled = !cut;
+    $('lever').style.transform = cut ? 'rotate(-28deg)' : 'rotate(0deg)';
+    document.querySelectorAll('.fb').forEach(e => e.style.display = cut ? 'none' : '');
+    document.querySelectorAll('.fa').forEach(e => e.style.display = '');
+    $('glowC').setAttribute('opacity', cut ? 0 : (S.loose ? .55 : 1));
+    $('bulb').setAttribute('fill', cut ? 'var(--surface)' : '#FFE6A0');
+    $('ledG').setAttribute('opacity', cut ? .18 : 1);
+    $('ledR').setAttribute('opacity', cut ? 1 : .18);
+    $('buzz').setAttribute('opacity', cut ? 1 : .25);
+    $('ardTxt').textContent = cut ? 'D7 → relé abierto' : 'vigilando…';
+    $('bornBox').setAttribute('stroke', S.loose ? 'var(--bad)' : 'var(--line)');
+    $('bornTag').setAttribute('opacity', S.loose ? 1 : 0);
+    $('looseWire').setAttribute('y2', S.loose ? 70 : 75);
+  }
+  function renderStats(){
+    $('vUV').textContent = S.uv;
+    $('vTh').textContent = Math.round(S.base + S.umbralUV);
+    $('vNo').textContent = S.ruido;
+    $('vPu').textContent = S.pulsos;
+    $('vTc').textContent = S.tCorte != null ? S.tCorte + ' ms' : '—';
+    $('vCt').textContent = S.cortes;
+    $('ardPul').textContent = `pulsos: ${Math.min(S.pulsos,3)}/3 · ruido ${S.ruido > S.umbralRuido ? 'ALTO' : 'ok'}`;
+    if (S.loose && S.energia && !S.disparado) $('glowC').setAttribute('opacity', (.45 + Math.random()*.55).toFixed(2));
+  }
+
+  // --- gráfica ---
+  const cv = $('plot'), ctx = cv.getContext('2d');
+  function size(){ const dpr = window.devicePixelRatio || 1; const w = cv.clientWidth; cv.width = w * dpr; cv.height = 260 * dpr; cv.style.height = '260px'; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  new ResizeObserver(size).observe(cv); size();
+  function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function draw(){
+    const w = cv.clientWidth, h = 260, top = 168, gap = 14, bot = h - top - gap;
+    ctx.clearRect(0,0,w,h);
+    const line = css('--line'), muted = css('--muted');
+    const data = hist.filter(d => !d.cut);
+    const maxUV = Math.max(300, ...data.map(d => Math.max(d.uv, d.th))) * 1.1;
+    ctx.font = '11px "JetBrains Mono", monospace'; ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++){ const y = 4 + (top-8) * i / 4; ctx.beginPath(); ctx.moveTo(34,y); ctx.lineTo(w,y); ctx.stroke(); ctx.fillText(Math.round(maxUV * (1 - i/4)), 0, y + 4); }
+    const y2 = top + gap; ctx.beginPath(); ctx.moveTo(34, y2 + bot); ctx.lineTo(w, y2 + bot); ctx.stroke();
+    ctx.fillText('200', 0, y2 + 8); ctx.fillText('0', 0, y2 + bot + 4);
+    const X = i => 34 + (w - 34) * i / (N - 1);
+    const off = N - hist.length;
+    let idx = 0; const pts = [];
+    hist.forEach(d => { if (d.cut){ pts.push({cut:true, i: off + idx}); } else { pts.push({...d, i: off + idx}); idx++; } });
+    // cortes
+    ctx.strokeStyle = css('--bad'); ctx.lineWidth = 2;
+    pts.filter(p => p.cut).forEach(p => { ctx.beginPath(); ctx.moveTo(X(p.i),0); ctx.lineTo(X(p.i),h); ctx.stroke(); });
+    const series = (key, color, lw, Y, dash) => {
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath(); let s = false;
+      pts.forEach(p => { if (p.cut) return; const x = X(p.i), y = Y(p[key]); s ? ctx.lineTo(x,y) : ctx.moveTo(x,y); s = true; });
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    const Yu = v => 4 + (top - 8) * (1 - Math.min(v, maxUV) / maxUV);
+    const Yn = v => y2 + bot * (1 - Math.min(v, 200) / 200);
+    // umbral ruido
+    ctx.strokeStyle = muted; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(34, Yn(S.umbralRuido)); ctx.lineTo(w, Yn(S.umbralRuido)); ctx.stroke(); ctx.setLineDash([]);
+    series('th', muted, 1.5, Yu, [6,4]);
+    series('uv', css('--uv'), 2, Yu);
+    series('no', css('--spark'), 1.8, Yn);
+    ctx.fillStyle = muted; ctx.fillText('UV', w - 22, 14); ctx.fillText('ruido', w - 40, y2 + 12);
+  }
+
+  function loop(){ animPhotons(); draw(); requestAnimationFrame(loop); }
+
+  // --- controles ---
+  const toggle = (btn, key, after) => $(btn).addEventListener('click', () => { S[key] = !S[key]; $(btn).setAttribute('aria-pressed', S[key]); after && after(); render(); });
+  toggle('bLoose', 'loose');
+  toggle('bLighter', 'lighter');
+  toggle('bTorch', 'torch', () => {
+    $('torchHint').textContent = S.torch ? 'Linterna prendida: mira la gráfica, la señal UV no se mueve. Sus fotones tienen menos de 3.4 eV.' : 'Prende la linterna: el sensor de nitruro de galio no la ve.';
+  });
+  $('bArc').addEventListener('click', () => {
+    if (!S.energia){ $('faultHint').textContent = 'Sin corriente no hay arco: el relé ya cortó. Rearma para volver a probar.'; return; }
+    S.loose = true; $('bLoose').setAttribute('aria-pressed', 'true');
+    S.arcTicks = 18;
+    $('faultHint').textContent = 'Un arco real en el empalme mete UV y ruido a la vez. El encendedor de la demo solo mete UV.';
+    render();
+  });
+  $('rearm').addEventListener('click', () => { calibrar(); energiaOn(); S.tCorte = null; S.eventStart = null; pushLog('-- rearme: linea base recalibrada --', 'h'); });
+  const bindRange = (id, out, key, fmt) => { const el = $(id); const f = () => { S[key] = +el.value; $(out).textContent = fmt(el.value); }; el.addEventListener('input', f); f(); };
+  bindRange('rSun', 'oSun', 'sun', v => v + ' %');
+  bindRange('rUV', 'oUV', 'umbralUV', v => v);
+  bindRange('rNo', 'oNo', 'umbralRuido', v => v);
+  bindRange('rDist', 'oDist', 'dist', v => v + ' cm');
+
+  function setRange(id, v){ $(id).value = v; $(id).dispatchEvent(new Event('input')); }
+  function reset(){
+    S.loose = false; S.lighter = false; S.torch = false; S.arcTicks = 0;
+    ['bLoose','bLighter','bTorch'].forEach(b => $(b).setAttribute('aria-pressed','false'));
+    setRange('rSun', 20); setRange('rDist', 20);
+    if (S.disparado){ calibrar(); energiaOn(); }
+    S.tCorte = null; S.eventStart = null; render();
+  }
+  document.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => {
+    reset(); const s = b.dataset.s;
+    pushLog(`-- prueba: ${b.parentElement.querySelector('span').firstChild.textContent} --`, 'h');
+    if (s === '1') setRange('rSun', 90);
+    if (s === '2') { S.torch = true; $('bTorch').setAttribute('aria-pressed','true'); }
+    if (s === '3') { S.lighter = true; $('bLighter').setAttribute('aria-pressed','true'); }
+    if (s === '4') { setRange('rDist', 60); S.lighter = true; $('bLighter').setAttribute('aria-pressed','true'); }
+    if (s === '5') { S.loose = true; $('bLoose').setAttribute('aria-pressed','true'); }
+    if (s === '6') { $('bArc').click(); }
+    render();
+  }));
+
+  // --- espectro / energía del fotón ---
+  function lam(v){
+    v = +v; const E = 1240 / v; const det = v >= 240 && v <= 370;
+    $('oLam').textContent = v + ' nm';
+    $('fE').textContent = `E = 1240 / ${v} = ${E.toFixed(2)} eV`;
+    $('eFill').style.width = Math.min(100, E / 6 * 100) + '%';
+    $('eGap').style.left = (3.4 / 6 * 100) + '%'; $('eGapL').style.left = (3.4 / 6 * 100) + '%';
+    const v2 = $('verdict');
+    v2.className = 'verdict ' + (det ? 'yes' : 'no');
+    v2.textContent = det ? 'El sensor lo detecta: el fotón supera la brecha y libera un electrón.'
+      : (v < 240 ? 'Fuera del rango del sensor (debajo de 240 nm).' : 'No lo detecta: el fotón no tiene energía suficiente para cruzar la brecha.');
+  }
+  $('rLam').addEventListener('input', e => lam(e.target.value));
+  document.querySelectorAll('[data-l]').forEach(c => c.addEventListener('click', () => { $('rLam').value = c.dataset.l; lam(c.dataset.l); }));
+  lam(337);
+
+  // arranque: calibrar() como en setup()
+  S.ambCur = ambTarget(); S.sensor = S.ambCur; S.uv = Math.round(S.sensor); calibrar();
+  for (let i = 0; i < 120; i++) hist.push({uv:S.uv, th:S.base + S.umbralUV, no:3});
+  pushLog('Cazachispas UV listo. Linea base calibrada.', 'h');
+  render();
+  setInterval(tick, 20);
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>

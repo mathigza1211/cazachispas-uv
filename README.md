@@ -1,26 +1,71 @@
 # Cazachispas UV: detector de arcos eléctricos por fotones ultravioleta
 
-Prototipo de bajo costo (≈ S/ 180 con materiales de demo; núcleo ≈ S/ 70) que detecta la chispa de un arco eléctrico por su luz UV (337 nm, segundo sistema positivo del N₂) y confirma con el ruido de la corriente; si ambos coinciden, un relé corta la energía. Proyecto escolar de Innova Schools para "El Gran Reto" (circuitos eléctricos: uso eficiente y seguro de la electricidad). Lema: *Vemos la chispa antes que el fuego.*
+[![Simulador en Vivo](https://img.shields.io/badge/%F0%9F%9A%80_Simulador_Arduino_en_Vivo-Abrir_en_GitHub_Pages-2ea44f?style=for-the-badge)](https://mathigza1211.github.io/cazachispas-uv/)
+[![Hardware](https://img.shields.io/badge/Hardware-Arduino_Uno_%2F_Nano_%2B_Sensor_UV-00979d?style=for-the-badge)](#lógica-de-detección-y-corte)
+[![Presupuesto](https://img.shields.io/badge/Costo_Prototipo-%E2%89%88_S%2F_70_(N%C3%BAcleo)-f59e0b?style=for-the-badge)](#archivos-del-repositorio)
+[![Portafolio](https://img.shields.io/badge/%F0%9F%93%82_Portafolio_General-Ver_8_Proyectos-8a2be2?style=for-the-badge)](https://github.com/mathigza1211/simuladores-portafolio)
 
-> **Estado:** diseño, código y simulador. **Las pruebas de la sección 9 del informe (tabla de aciertos y tiempos) aún no tienen resultados medidos**; no se afirma una tasa de aciertos ni un tiempo de corte real.
+> *"Vemos la chispa antes que el fuego."*  
+> Proyecto escolar de **Innova Schools** para **"El Gran Reto"** (*Circuitos eléctricos: uso eficiente y seguro de la electricidad*).
 
-## Cómo usarlo
-- **Simulador:** abre `index.html` en el navegador. Provoca fallas (empalme flojo, chispa, encendedor de arco), ajusta umbrales y mira cómo decide el Arduino. Incluye un Serial Plotter simulado y un panel de física (energía del fotón vs. brecha del GaN, 3.4 eV).
-- **Código:** `cazachispas_uv.ino` (Arduino Uno/Nano), transcrito del informe; calibrar `UMBRAL_UV` y `UMBRAL_RUIDO` con el prototipo real.
+---
 
-## Qué hace la lógica
-1. Línea base de UV que se adapta lentamente (sol).
-2. Pulsos UV rápidos sobre línea base + umbral.
-3. Corte si hay pulso UV **y** corriente inestable, o ≥ 3 pulsos UV en 2 s. Rearme manual.
+## ⚡ Descripción General
 
-## Límites (importante)
-- Es un prototipo de 12 V: no reemplaza un AFCI certificado ni debe probarse en 220 V (solo un electricista certificado).
-- El sensor necesita línea de vista; el módulo UV responde en ≈ 0.5 s, por lo que una chispa única muy corta puede pasar desapercibida.
-- La luz UV del sol puede acercarse al umbral: hay que calibrar en el lugar real.
-- Los valores del simulador son ilustrativos; el simulador reproduce la lógica del código, no mediciones.
+Prototipo electrónico de bajo costo (**$\approx\text{S/ }180$** con maqueta de demostración; **núcleo electrónico $\approx\text{S/ }70$**) diseñado para detectar la chispa de un **arco eléctrico serie/paralelo** a través de su emisión de **fotones ultravioleta** ($337\text{ nm}$, segundo sistema positivo del nitrógeno atmosférico $\text{N}_2$) y **confirmar el evento mediante el ruido de alta variación en la corriente eléctrica**. Cuando se cumple la condición de alarma, un módulo de relé desconecta inmediatamente la carga y exige rearme manual.
 
-## Documentación
-`Cazachispas_UV_Informe_tecnologico.pdf` (problema, física con QED, diseño, presupuesto, pruebas, seguridad, referencias).
+> [!IMPORTANT]
+> **Estado del proyecto:** Diseño electrónico, firmware para Arduino (`.ino`), informe tecnológico completo y simulador interactivo. **Las tablas de pruebas experimentales de la sección 9 del informe aún están en blanco para llenarse con mediciones físicas**; no se declara ninguna tasa de aciertos ni tiempo de desconexión medido.
 
-## Autoría
-Mathias Zárate Amenero, Lima, Perú (proyecto escolar de Innova Schools). Desarrollado con asistencia de Claude (Anthropic).
+👉 **[Probar el Simulador Interactivo en Vivo](https://mathigza1211.github.io/cazachispas-uv/)** *(incluye Serial Plotter en vivo, inyección de fallas eléctricas y panel de física cuántica del fotodiodo).*
+
+---
+
+## 🧠 Lógica de Detección en Doble Canal
+
+```mermaid
+flowchart TD
+    A["Lectura continua: Sensor UV (A0) + Corriente ACS712 (A1)"] --> B["Filtro de línea base UV lenta (compensación de luz solar)"]
+    B --> C{"¿Pulso UV rápido > Base + UMBRAL_UV?"}
+    C -- "No" --> A
+    C -- "Sí" --> D{"¿Corriente inestable (> UMBRAL_RUIDO) O ≥ 3 pulsos UV en 2 s?"}
+    D -- "No" --> A
+    D -- "Sí (Arco confirmado)" --> E["¡DISPARO! Relé corta energía + Alarma sonora/LED"]
+    E --> F["Enclavamiento hasta botón de rearme manual"]
+```
+
+### Características del Simulador Web y del Firmware
+
+| Componente | Detalle Técnico |
+| :--- | :--- |
+| **Física del Sensor (QED / Estado Sólido)** | Explica por qué el fotón UV del arco de $\text{N}_2$ ($337\text{ nm} \approx 3.68\text{ eV}$) supera la brecha prohibida (*bandgap*) del semiconductor $\text{GaN/AlGaN}$ ($\approx 3.4\text{ eV}$), mientras que la luz visible doméstica no genera par electrón–hueco. |
+| **Escenarios de Prueba Simulados** | Permite provocar **empalme flojo**, **chispa intermitente**, **encendedor de arco** o variaciones de luz ambiental y observar la respuesta del algoritmo de Arduino en un **Serial Plotter** en tiempo real. |
+| **Firmware Listo para Calibrar** | [`cazachispas_uv.ino`](cazachispas_uv.ino) implementa promedio móvil exponencial para la línea base solar, ventana temporal deslizante de $2\text{ s}$ y constantes ajustables `UMBRAL_UV` y `UMBRAL_RUIDO`. |
+
+---
+
+## ⚠️ Límites de Seguridad y Operación
+
+> [!CAUTION]
+> - **Prototipo educativo de 12 V DC:** Este circuito **no reemplaza** un interruptor diferencial ni un interruptor de falla de arco certificado (**AFCI**). **Jamás debe conectarse directamente a la red de 220 V AC** sin aislamiento y supervisión de un electricista colegiado.
+> - **Línea de vista y tiempo de respuesta:** El sensor óptico requiere ver la chispa (o su reflejo dentro de la caja de paso); además, los módulos UV analógicos económicos tienen constantes de tiempo de $\approx 0.5\text{ s}$, por lo que un micro-arco único y fugaz puede no cruzar el umbral.
+> - **Calibración in situ:** La radiación UV solar directa puede elevar el fondo; es indispensable calibrar los umbrales en el entorno real de montaje.
+
+---
+
+## 📄 Archivos del Repositorio
+
+| Archivo | Descripción |
+| :--- | :--- |
+| [`index.html`](index.html) | Simulador interactivo del circuito, Serial Plotter y panel de física del fotodiodo UV. |
+| [`cazachispas_uv.ino`](cazachispas_uv.ino) | Código fuente para **Arduino Uno / Nano** con lógica adaptativa y enclavamiento de seguridad. |
+| [`Cazachispas_UV_Informe_tecnologico.pdf`](Cazachispas_UV_Informe_tecnologico.pdf) | Informe tecnológico completo: planteamiento del problema, física cuántica (QED), esquema, presupuesto en soles (S/), protocolo de pruebas y seguridad. |
+
+---
+
+## 👤 Autoría
+
+**Mathias Zárate Amenero** — *Lima, Perú (Innova Schools)*  
+Desarrollado con asistencia de **Claude (Anthropic)**.
+
+🔗 **Ver más proyectos:** [Portafolio de Simuladores y Prototipos](https://github.com/mathigza1211/simuladores-portafolio)
